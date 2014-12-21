@@ -1,0 +1,22 @@
+{
+  "name": "atom-css-class-checker",
+  "main": "./lib/atom-css-class-checker",
+  "version": "0.0.0",
+  "description": "css class checker",
+  "activationCommands": {
+    "atom-workspace": "atom-css-class-checker:toggle"
+  },
+  "repository": "https://github.com/atom/atom-package",
+  "license": "MIT",
+  "engines": {
+    "atom": ">0.50.0"
+  },
+  "dependencies": {
+    "walk": "^2.3.4",
+    "space-pen": "~4.3.0",
+    "event-kit": "~0.8.1",
+    "q": "~1.1.2",
+    "css-parse": "~2.0.0",
+    "lodash": "~2.4.1"
+  }
+}

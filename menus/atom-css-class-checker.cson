@@ -1,0 +1,22 @@
+# See https://atom.io/docs/latest/creating-a-package#menus for more details
+'context-menu':
+  'atom-text-editor': [
+    {
+      'label': 'Toggle atom-css-class-checker-package'
+      'command': 'atom-css-class-checker:toggle'
+    }
+  ]
+'menu': [
+  {
+    'label': 'Packages'
+    'submenu': [
+      'label': 'atom-css-class-checker'
+      'submenu': [
+        {
+          'label': 'Toggle'
+          'command': 'atom-css-class-checker:toggle'
+        }
+      ]
+    ]
+  }
+]
