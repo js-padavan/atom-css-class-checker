@@ -11,6 +11,8 @@ class SSParser
     @classes = []
     @ids = []
     @ssFiles = []
+    defered = Q.defer()
+    @loaded = defered.promise;
 
     prjDir = atom.project.getPaths()
 
@@ -21,8 +23,8 @@ class SSParser
         res = @parseSSFile(files[i])
         @classes = @classes.concat(res.classes)
         @ids = @ids.concat(res.ids)
+      defered.resolve()
       console.log @classes, @ids
-
 
 
   getSSFiles: (prjPath) ->
@@ -34,7 +36,7 @@ class SSParser
     defered = Q.defer()
     walker.on 'names', (root, nodeNamesArray)->
       path.normalize(root);
-      console.log('nodes', nodeNamesArray)
+      # console.log('nodes', nodeNamesArray)
       exp = /\w+\.(css|less)$/
       nodeNamesArray.forEach (filename)->
         if exp.test(filename)
@@ -47,7 +49,12 @@ class SSParser
 
     return defered.promise
 
+  removeFileSelectors: (file)->
+    _.remove @classes, (elem)->
+      elem.file == file
+
   parseSSFile: (file)->
+    @removeFileSelectors(file)
     buf = fs.readFileSync file, encoding: 'Utf-8';
     try
       cssAST = parse(buf, silent: false);
@@ -61,7 +68,7 @@ class SSParser
         sel: cssAST.stylesheet.rules[i].selectors[0],
         pos: cssAST.stylesheet.rules[i].position
 
-    console.log selectors;
+    # console.log selectors;
     classMatcher = 	/\.([\w|-]*)/gmi
     idMatcher = /#([\w|-]*)/gmi
     classes = [];
