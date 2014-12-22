@@ -9,7 +9,7 @@ class Manager
 
   constructor: ->
     @parser = null
-    @prevFile = undefined
+    @prevEditor = undefined
     @disposables = []
     @filesToSubscribe = ['.html', '.php']
     @styleFiles = ['.css', '.less']
@@ -25,14 +25,14 @@ class Manager
           @subscribeOnEditorEvents(editor)
           @parseEditor(editor)
 
-      @prevFile = atom.workspace.getActivePaneItem().getUri()
+      @prevEditor = atom.workspace.getActivePaneItem()
       atom.workspace.onDidChangeActivePaneItem (item)=>
-        console.log @prevFile, _.indexOf(@styleFiles, path.extname(@prevFile))
-        # if it was stylesheet file, then it is required to update parser
-        if _.indexOf(@styleFiles, path.extname(@prevFile)) != -1
-          console.log 'updating parser'
-          @parser.parseSSFile(@prevFile)
-        @prevFile = item.getUri()
+        title = @prevEditor.getTitle()
+        console.log _.indexOf(@styleFiles, path.extname(title)), @prevEditor.isModified()
+        if (_.indexOf(@styleFiles, path.extname(title)) != -1) and @prevEditor.isModified()
+           console.log 'updating parser'
+           @parser.updateWithSSFile(@prevEditor.getUri(), @prevEditor.getText())
+        @prevEditor = item
 
 
 

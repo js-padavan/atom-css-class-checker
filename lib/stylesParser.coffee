@@ -53,9 +53,19 @@ class SSParser
     _.remove @classes, (elem)->
       elem.file == file
 
-  parseSSFile: (file)->
+  updateWithSSFile: (file, text)->
+    return unless file isnt undefined and text isnt undefined
     @removeFileSelectors(file)
+    res = @parseText(text, file)
+    @classes = @classes.concat(res.classes)
+    @ids = @ids.concat(res.ids)
+
+  parseSSFile: (file)->
     buf = fs.readFileSync file, encoding: 'Utf-8';
+    @parseText(buf, file)
+
+  parseText: (buf, file)->
+    console.log 'parsing text'
     try
       cssAST = parse(buf, silent: false);
     catch ex
