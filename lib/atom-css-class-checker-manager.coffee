@@ -43,33 +43,34 @@ class Manager
     return (_.indexOf(@cssFiles, path.extname(filename)) != -1)
 
   watchCssChangings: ->
-    try
-      console.log 'watching css'
-      disposable = null
-      getPrevEditor = (editor)=>
-        @prevEditor.editor = editor || atom.workspace.getActivePaneItem()
-        @prevEditor.isCss = @containsCss(@prevEditor.editor.getTitle())
-        @prevEditor.modified = false
+    disposable = null
+    getPrevEditor = (editor)=>
+      @prevEditor.editor = editor || atom.workspace.getActivePaneItem()
+      if (@prevEditor.editor == undefined)
         disposable?.dispose()
-        if @prevEditor.isCss
-          disposable = editor.onDidStopChanging =>
-            @prevEditor.modified = true
-            disposable.dispose()
-            disposable = null
-        else
+        dispose = null
+        return
+      @prevEditor.isCss = @containsCss(@prevEditor.editor.getTitle())
+      @prevEditor.modified = false
+      disposable?.dispose()
+      if @prevEditor.isCss
+        disposable = editor.onDidStopChanging =>
+          @prevEditor.modified = true
+          disposable.dispose()
           disposable = null
-        console.log @prevEditor
+      else
+        disposable = null
+      console.log @prevEditor
 
-      getPrevEditor()
+    getPrevEditor()
 
-      @disposables['global'].add atom.workspace.onDidChangeActivePaneItem (item)=>
-        # parsing css file if it is required
-        if (@prevEditor.isCss && @prevEditor.modified)
-          console.log 'parsing required'
-          @parser.updateWithSSFile(@prevEditor.editor.getUri(), @prevEditor.editor.getText())
-        getPrevEditor(item)
-    catch err
-      console.log err, err.stack
+    @disposables['global'].add atom.workspace.onDidChangeActivePaneItem (item)=>
+      # parsing css file if it is required
+      if (@prevEditor.isCss && @prevEditor.modified)
+        console.log 'parsing required'
+        @parser.updateWithSSFile(@prevEditor.editor.getUri(), @prevEditor.editor.getText())
+      getPrevEditor(item)
+
 
   subscribeOnHtmlEditorEvents: (editor)->
     editorUri = editor.getUri()
@@ -90,8 +91,8 @@ class Manager
     @disposables[editorUri] = compositeDisposable
 
   parseTextRage: (range, editor)->
-    r = /class="([\w|\s|-]*)"/gmi
-    i = /id\s*=\s*"\s*([\w|-]*)\s*"/gmi
+    r = /class="([\w|\s|\-|_]*)"/gmi
+    i = /id\s*=\s*["|']\s*([\w|\-|_]*)\s*["|']/gmi
     #  scanning for clasees
     editor.scanInBufferRange r, range, (it)=>
       it.range.start.column += it.matchText.indexOf('"')
@@ -99,11 +100,11 @@ class Manager
     # scanning for ids
     editor.scan i, (it)=>
       it.range.start.column += it.matchText.indexOf('"')
-      @highlightRange(it.range, it.match[1], editor)
+      @highlightIdRange(it.range, it.match[1], editor)
 
   parseEditor: (editor)->
-    c = /class="([\w|\s|-]*)"/gmi
-    i = /id\s*=\s*"\s*([\w|-]*)\s*"/gmi
+    c = /class=["|']([\w|\s|\-|_]*)["|']/gmi
+    i = /id\s*=\s*["|']\s*([\w|\-|_]*)\s*["|']/gmi
     # scanning for classes
     editor.scan c, (it)=>
       it.range.start.column += it.matchText.indexOf('"')
@@ -111,9 +112,9 @@ class Manager
     # scanning for ids
     editor.scan i, (it)=>
       it.range.start.column += it.matchText.indexOf('"')
-      @highlightRange(it.range, it.match[1], editor)
+      @highlightIdRange(it.range, it.match[1], editor)
 
-  highlightRange: (range, text, editor)->
+  highlightClassRange: (range, text, editor)->
     return unless range isnt undefined and text isnt undefined and editor isnt undefined
     #  removing old markers in the range
     oldMarkers = editor.findMarkers(containsBufferRange: range)
@@ -126,10 +127,23 @@ class Manager
     else
       editor.decorateMarker(marker, type: 'highlight', class: 'non-existed-class')
 
+  highlightIdRange: (range, text, editor)->
+    return unless range isnt undefined and text isnt undefined and editor isnt undefined
+    #  removing old markers in the range
+    oldMarkers = editor.findMarkers(containsBufferRange: range)
+    for i in [0...oldMarkers.length]
+      oldMarkers[i].destroy()
+
+    marker = editor.markBufferRange(range, invalidate: 'overlap')
+    if (_.findIndex(@parser.ids, name: text) != -1)
+      editor.decorateMarker(marker, type: 'highlight', class: 'existed-class')
+    else
+      editor.decorateMarker(marker, type: 'highlight', class: 'non-existed-class')
+
   scanInRange: (range, editor)->
-    r = /([\w|-]+)/ig
+    r = /([\w|\-|_]+)/ig
     editor.scanInBufferRange r, range, (it)=>
-      @highlightRange(it.range, it.matchText, editor)
+      @highlightClassRange(it.range, it.matchText, editor)
 
   cancel: ->
     for k,v of @disposables

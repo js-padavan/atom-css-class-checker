@@ -32,6 +32,7 @@ class SSParser
   getSSFiles: (prjPath) ->
     options =
       followLinks: false
+      filters: ['node_modules']
 
     files = []
     walker = walk.walk(prjPath[0], options)
@@ -69,55 +70,52 @@ class SSParser
     @parseText(buf, file)
 
   parseText: (buf, file)->
+    console.log 'parsing text'
     try
-      console.log 'parsing text'
-      try
-        cssAST = parse(buf, silent: false);
-      catch ex
-        console.log 'failed to parse #{file}', ex
-        return classes: [], ids: []
+      cssAST = parse(buf, silent: false);
+    catch ex
+      console.log 'failed to parse #{file}', ex
+      return classes: [], ids: []
 
-      selectors = [];
-      console.log cssAST.stylesheet
-      for i  in [0...cssAST.stylesheet.rules.length]
-        if (cssAST.stylesheet.rules[i].selectors)
-          selectors.push
-            sel: cssAST.stylesheet.rules[i].selectors[0],
-            pos: cssAST.stylesheet.rules[i].position
+    selectors = [];
+    console.log cssAST.stylesheet
+    for i  in [0...cssAST.stylesheet.rules.length]
+      if (cssAST.stylesheet.rules[i].selectors)
+        selectors.push
+          sel: cssAST.stylesheet.rules[i].selectors[0],
+          pos: cssAST.stylesheet.rules[i].position
 
-      # console.log selectors;
-      classMatcher = 	/\.([\w|-]*)/gmi
-      idMatcher = /#([\w|-]*)/gmi
-      classes = [];
-      ids = [];
+    # console.log selectors;
+    classMatcher = 	/\.([\w|-]*)/gmi
+    idMatcher = /#([\w|-]*)/gmi
+    classes = [];
+    ids = [];
 
-      for i  in [0...selectors.length]
-        cls = selectors[i].sel.match(classMatcher)
-        for j in [0...cls?.length]
-          temp = cls[j].substring(1);
-          pos = _.findIndex(classes, name: temp)
-          if (pos == -1)
-            classes.push
-              name: temp,
-              file: file,
-              positions: [selectors[i].pos]
-          else
-            classes[pos].positions.push(selectors[i].pos)
+    for i  in [0...selectors.length]
+      cls = selectors[i].sel.match(classMatcher)
+      for j in [0...cls?.length]
+        temp = cls[j].substring(1);
+        pos = _.findIndex(classes, name: temp)
+        if (pos == -1)
+          classes.push
+            name: temp,
+            file: file,
+            positions: [selectors[i].pos]
+        else
+          classes[pos].positions.push(selectors[i].pos)
 
-        ident = selectors[i].sel.match(idMatcher)
-        for j in [0...ident?.length]
-          temp = ident[j].substring(1)
-          pos = _.findIndex(ids, name: temp)
-          if (pos == -1)
-            ids.push
-              name: temp,
-              file: file,
-              positions: [selectors[i].pos]
-          else
-            ids[pos].positions.push(selectors[i].pos)
+      ident = selectors[i].sel.match(idMatcher)
+      for j in [0...ident?.length]
+        temp = ident[j].substring(1)
+        pos = _.findIndex(ids, name: temp)
+        if (pos == -1)
+          ids.push
+            name: temp,
+            file: file,
+            positions: [selectors[i].pos]
+        else
+          ids[pos].positions.push(selectors[i].pos)
 
-    catch err
-      console.log err, err.stack
     return classes: classes, ids: ids
 
   onDidUpdate: (cb)->
