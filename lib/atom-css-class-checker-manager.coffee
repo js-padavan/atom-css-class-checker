@@ -1,6 +1,6 @@
 SSParser = require './stylesParser'
 _ = require 'lodash'
-{CompositeDisposable} = require 'event-kit'
+{CompositeDisposable, Disposable} = require 'event-kit'
 path = require 'path'
 
 
@@ -9,38 +9,73 @@ class Manager
 
   constructor: ->
     @parser = null
-    @prevEditor = undefined
+    @prevEditor = {}
     @disposables = []
-    @filesToSubscribe = ['.html', '.php']
-    @styleFiles = ['.css', '.less']
+    @htmlContFiles = ['.html', '.php']
+    @cssFiles = ['.css', '.less']
+    @running = false
 
   init: ->
     @parser = new SSParser()
     @parser.loaded.then =>
-      atom.workspace.observeTextEditors (editor)=>
-        console.log "new editor!"
-        # subscribin only on specific filetypes
+      # subscribing only on files which may contain HTML
+      compositeDisposable = new CompositeDisposable()
+      @disposables['global'] = compositeDisposable
+      compositeDisposable.add  atom.workspace.observeTextEditors (editor)=>
         title = editor.getTitle()
-        if _.indexOf(@filesToSubscribe, path.extname(title)) != -1
-          @subscribeOnEditorEvents(editor)
+        if @containsHtml(title)
+          @subscribeOnHtmlEditorEvents(editor)
           @parseEditor(editor)
+          # subscribing on parser updates
+          @parser.onDidUpdate =>
+            console.log 'reparsing editor ', editor.getTitle()
+            @parseEditor(editor)
 
-      @prevEditor = atom.workspace.getActivePaneItem()
-      atom.workspace.onDidChangeActivePaneItem (item)=>
-        title = @prevEditor.getTitle()
-        console.log _.indexOf(@styleFiles, path.extname(title)), @prevEditor.isModified()
-        if (_.indexOf(@styleFiles, path.extname(title)) != -1) and @prevEditor.isModified()
-           console.log 'updating parser'
-           @parser.updateWithSSFile(@prevEditor.getUri(), @prevEditor.getText())
-        @prevEditor = item
-
+      #  susbscribing on css changes
+      @watchCssChangings()
+    @running = true
 
 
-  subscribeOnEditorEvents: (editor)->
-    console.log "subs on events"
+  containsHtml: (filename)->
+    return (_.indexOf(@htmlContFiles, path.extname(filename)) != -1)
+
+  containsCss: (filename)->
+    return (_.indexOf(@cssFiles, path.extname(filename)) != -1)
+
+  watchCssChangings: ->
+    try
+      console.log 'watching css'
+      disposable = null
+      getPrevEditor = (editor)=>
+        @prevEditor.editor = editor || atom.workspace.getActivePaneItem()
+        @prevEditor.isCss = @containsCss(@prevEditor.editor.getTitle())
+        @prevEditor.modified = false
+        disposable?.dispose()
+        if @prevEditor.isCss
+          disposable = editor.onDidStopChanging =>
+            @prevEditor.modified = true
+            disposable.dispose()
+            disposable = null
+        else
+          disposable = null
+        console.log @prevEditor
+
+      getPrevEditor()
+
+      @disposables['global'].add atom.workspace.onDidChangeActivePaneItem (item)=>
+        # parsing css file if it is required
+        if (@prevEditor.isCss && @prevEditor.modified)
+          console.log 'parsing required'
+          @parser.updateWithSSFile(@prevEditor.editor.getUri(), @prevEditor.editor.getText())
+        getPrevEditor(item)
+    catch err
+      console.log err, err.stack
+
+  subscribeOnHtmlEditorEvents: (editor)->
     editorUri = editor.getUri()
     compositeDisposable = new CompositeDisposable()
 
+      # reparsing file on changings
     compositeDisposable.add editor.onDidStopChanging =>
        range = editor.getCurrentParagraphBufferRange()
        console.log editor, range
@@ -96,5 +131,17 @@ class Manager
     editor.scanInBufferRange r, range, (it)=>
       @highlightRange(it.range, it.matchText, editor)
 
+  cancel: ->
+    for k,v of @disposables
+      v.dispose()
+    @running = false
+
+  toggle: ->
+    if @running
+      console.log 'pausing'
+      @cancel()
+    else
+      console.log 'starting'
+      @init()
 
 module.exports = Manager

@@ -4,10 +4,12 @@ path = require 'path'
 Q = require 'q'
 parse = require 'css-parse'
 _ = require 'lodash'
+{Emitter} = require 'event-kit'
 
 class SSParser
 
   constructor: ->
+    @emitter = new Emitter()
     @classes = []
     @ids = []
     @ssFiles = []
@@ -59,57 +61,66 @@ class SSParser
     res = @parseText(text, file)
     @classes = @classes.concat(res.classes)
     @ids = @ids.concat(res.ids)
+    @emitter.emit('onDidUpdate')
+
 
   parseSSFile: (file)->
     buf = fs.readFileSync file, encoding: 'Utf-8';
     @parseText(buf, file)
 
   parseText: (buf, file)->
-    console.log 'parsing text'
     try
-      cssAST = parse(buf, silent: false);
-    catch ex
-      console.log 'failed to parse #{file}', ex
-      return classes: [], ids: []
+      console.log 'parsing text'
+      try
+        cssAST = parse(buf, silent: false);
+      catch ex
+        console.log 'failed to parse #{file}', ex
+        return classes: [], ids: []
 
-    selectors = [];
-    for i  in [0...cssAST.stylesheet.rules.length]
-      selectors.push
-        sel: cssAST.stylesheet.rules[i].selectors[0],
-        pos: cssAST.stylesheet.rules[i].position
+      selectors = [];
+      console.log cssAST.stylesheet
+      for i  in [0...cssAST.stylesheet.rules.length]
+        if (cssAST.stylesheet.rules[i].selectors)
+          selectors.push
+            sel: cssAST.stylesheet.rules[i].selectors[0],
+            pos: cssAST.stylesheet.rules[i].position
 
-    # console.log selectors;
-    classMatcher = 	/\.([\w|-]*)/gmi
-    idMatcher = /#([\w|-]*)/gmi
-    classes = [];
-    ids = [];
+      # console.log selectors;
+      classMatcher = 	/\.([\w|-]*)/gmi
+      idMatcher = /#([\w|-]*)/gmi
+      classes = [];
+      ids = [];
 
-    for i  in [0...selectors.length]
-      cls = selectors[i].sel.match(classMatcher)
-      for j in [0...cls?.length]
-        temp = cls[j].substring(1);
-        pos = _.findIndex(classes, name: temp)
-        if (pos == -1)
-          classes.push
-            name: temp,
-            file: file,
-            positions: [selectors[i].pos]
-        else
-          classes[pos].positions.push(selectors[i].pos)
+      for i  in [0...selectors.length]
+        cls = selectors[i].sel.match(classMatcher)
+        for j in [0...cls?.length]
+          temp = cls[j].substring(1);
+          pos = _.findIndex(classes, name: temp)
+          if (pos == -1)
+            classes.push
+              name: temp,
+              file: file,
+              positions: [selectors[i].pos]
+          else
+            classes[pos].positions.push(selectors[i].pos)
 
-      ident = selectors[i].sel.match(idMatcher)
-      for j in [0...ident?.length]
-        temp = ident[j].substring(1)
-        pos = _.findIndex(ids, name: temp)
-        if (pos == -1)
-          ids.push
-            name: temp,
-            file: file,
-            positions: [selectors[i].pos]
-        else
-          ids[pos].positions.push(selectors[i].pos)
+        ident = selectors[i].sel.match(idMatcher)
+        for j in [0...ident?.length]
+          temp = ident[j].substring(1)
+          pos = _.findIndex(ids, name: temp)
+          if (pos == -1)
+            ids.push
+              name: temp,
+              file: file,
+              positions: [selectors[i].pos]
+          else
+            ids[pos].positions.push(selectors[i].pos)
 
-
+    catch err
+      console.log err, err.stack
     return classes: classes, ids: ids
+
+  onDidUpdate: (cb)->
+    @emitter.on('onDidUpdate', cb)
 
 module.exports = SSParser
