@@ -1,1 +1,3 @@
 node_modules/
+lib/SimpleListView.coffee
+lib/atom-css-class-checker-view.coffee
