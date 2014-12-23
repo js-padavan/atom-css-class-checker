@@ -12,7 +12,7 @@ class Manager
     @prevEditor = {}
     @disposables = []
     @htmlContFiles = ['.html', '.php']
-    @cssFiles = ['.css', '.less']
+    @cssFiles = ['.css']
     @running = false
 
   init: ->

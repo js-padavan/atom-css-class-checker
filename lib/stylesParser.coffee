@@ -40,7 +40,7 @@ class SSParser
     walker.on 'names', (root, nodeNamesArray)->
       path.normalize(root);
       # console.log('nodes', nodeNamesArray)
-      exp = /\w+\.(css|less)$/
+      exp = /\w+\.(css)$/
       nodeNamesArray.forEach (filename)->
         if exp.test(filename)
           # console.log(root, filename)
