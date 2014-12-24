@@ -14,6 +14,7 @@ class Manager
     @htmlContFiles = ['.html', '.php']
     @cssFiles = ['.css']
     @running = false
+    @editorsMarkers = []
 
   init: ->
     @parser = new SSParser()
@@ -91,6 +92,7 @@ class Manager
     @disposables[editorUri] = compositeDisposable
 
   parseTextRage: (range, editor)->
+    @removeEditorMarkersInRange(range, editor)
     r = /class="([\w|\s|\-|_]*)"/gmi
     i = /id\s*=\s*["|']\s*([\w|\-|_]*)\s*["|']/gmi
     #  scanning for clasees
@@ -103,6 +105,7 @@ class Manager
       @highlightIdRange(it.range, it.match[1], editor)
 
   parseEditor: (editor)->
+    @removeAllEditorMarkers(editor)
     c = /class=["|']([\w|\s|\-|_]*)["|']/gmi
     i = /id\s*=\s*["|']\s*([\w|\-|_]*)\s*["|']/gmi
     # scanning for classes
@@ -114,27 +117,51 @@ class Manager
       it.range.start.column += it.matchText.indexOf('"')
       @highlightIdRange(it.range, it.match[1], editor)
 
+  removeEditorMarkersInRange: (range, editor)->
+    markers = @editorsMarkers[editor.getUri()]
+    return unless markers
+    for i in [0...markers.length]
+      if range.containsRange(markers[i].bufferMarker.range)
+        markers[i].destroy()
+        markers[i] = null
+    @editorsMarkers[editor.getUri()] = _.compact(markers)
+
+  removeAllEditorMarkers: (editor)->
+    uri = editor.getUri()
+    markers =  @editorsMarkers[uri]
+    return unless markers
+    for i in [0...markers.length]
+      markers[i].destroy()
+    @editorsMarkers[uri].length = 0
+
+
+  removeAllMarkers: ->
+    for k,v of @editorsMarkers
+      for i in [0...@editorsMarkers[k].length]
+        @editorsMarkers[k][i].destroy()
+      delete @editorsMarkers[k]
+
+  createEditorMarker: (editor, range)->
+    marker = editor.markBufferRange(range, invalidate: 'overlap')
+    uri = editor.getUri()
+    if @editorsMarkers[uri] != undefined
+      @editorsMarkers[uri].push(marker)
+    else
+      @editorsMarkers[uri] = [marker]
+    return marker
+
   highlightClassRange: (range, text, editor)->
     return unless range isnt undefined and text isnt undefined and editor isnt undefined
-    #  removing old markers in the range
-    oldMarkers = editor.findMarkers(containsBufferRange: range)
-    for i in [0...oldMarkers.length]
-      oldMarkers[i].destroy()
-
-    marker = editor.markBufferRange(range, invalidate: 'overlap')
+    marker = @createEditorMarker(editor, range)
     if (_.findIndex(@parser.classes, name: text) != -1)
       editor.decorateMarker(marker, type: 'highlight', class: 'existed-class')
     else
       editor.decorateMarker(marker, type: 'highlight', class: 'non-existed-class')
 
+
   highlightIdRange: (range, text, editor)->
     return unless range isnt undefined and text isnt undefined and editor isnt undefined
-    #  removing old markers in the range
-    oldMarkers = editor.findMarkers(containsBufferRange: range)
-    for i in [0...oldMarkers.length]
-      oldMarkers[i].destroy()
-
-    marker = editor.markBufferRange(range, invalidate: 'overlap')
+    marker = @createEditorMarker(editor, range)
     if (_.findIndex(@parser.ids, name: text) != -1)
       editor.decorateMarker(marker, type: 'highlight', class: 'existed-class')
     else
@@ -146,6 +173,7 @@ class Manager
       @highlightClassRange(it.range, it.matchText, editor)
 
   cancel: ->
+    @removeAllMarkers()
     for k,v of @disposables
       v.dispose()
     @running = false
