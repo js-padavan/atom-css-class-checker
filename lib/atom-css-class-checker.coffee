@@ -9,7 +9,20 @@ Manager = require './atom-css-class-checker-manager'
 
 
 module.exports =
-  # atomPackageView: null
+  config:
+    ignoreDirectories:
+      type: 'array',
+      title: 'Ignore Directories',
+      default: ['node_modules/', '.git/']
+      items:
+        type: 'string'
+    ignoreFiles:
+      type: 'array'
+      title: 'Ignore Files'
+      default: []
+      items:
+        type: 'string'
+
 
   activate: (state) ->
     @manager = new Manager()
@@ -17,10 +30,7 @@ module.exports =
     atom.commands.add 'atom-workspace', 'atom-css-class-checker:toggle': =>
       @manager.toggle()
 
-    console.log 'atom-package loading';
-
   deactivate: ->
-    # @atomPackageView.destroy()
     console.log 'deactivating'
     @manager.cancel()
 

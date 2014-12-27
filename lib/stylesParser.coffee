@@ -21,18 +21,17 @@ class SSParser
     @getSSFiles(prjDir).then (files)=>
       @ssFiles = files
       for i in [0...files.length]
-        console.log 'parsing file', i
         res = @parseSSFile(files[i])
         @classes = @classes.concat(res.classes)
         @ids = @ids.concat(res.ids)
       defered.resolve()
-      console.log @classes, @ids
 
 
   getSSFiles: (prjPath) ->
+    {ignoreDirectories, ignoreFiles} = atom.config.get('atom-css-class-checker')
     options =
       followLinks: false
-      filters: ['node_modules']
+      filters: ignoreDirectories
 
     files = []
     walker = walk.walk(prjPath[0], options)
@@ -42,12 +41,13 @@ class SSParser
       # console.log('nodes', nodeNamesArray)
       exp = /\w+\.(css)$/
       nodeNamesArray.forEach (filename)->
+        if _.indexOf(ignoreFiles, filename) >= 0
+          return
         if exp.test(filename)
           # console.log(root, filename)
           files.push(path.join(path.normalize(root), filename))
 
     walker.on 'end', ()->
-      console.log('total', files);
       defered.resolve(files)
 
     return defered.promise
@@ -70,7 +70,6 @@ class SSParser
     @parseText(buf, file)
 
   parseText: (buf, file)->
-    console.log 'parsing text'
     try
       cssAST = parse(buf, silent: false);
     catch ex
@@ -78,7 +77,6 @@ class SSParser
       return classes: [], ids: []
 
     selectors = [];
-    console.log cssAST.stylesheet
     for i  in [0...cssAST.stylesheet.rules.length]
       if (cssAST.stylesheet.rules[i].selectors)
         selectors.push
