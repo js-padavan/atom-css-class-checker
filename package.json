@@ -1,7 +1,7 @@
 {
   "name": "atom-css-class-checker",
   "main": "./lib/atom-css-class-checker",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "plugin checks presense of used css classes and ids in project's css files",
   "activationCommands": {
     "atom-workspace": "atom-css-class-checker:toggle"
