@@ -70,6 +70,7 @@ class SSParser
     @parseText(buf, file)
 
   parseText: (buf, file)->
+    checkIds = atom.config.get('atom-css-class-checker.checkIds')
     try
       cssAST = parse(buf, silent: false);
     catch ex
@@ -102,17 +103,18 @@ class SSParser
         else
           classes[pos].positions.push(selectors[i].pos)
 
-      ident = selectors[i].sel.match(idMatcher)
-      for j in [0...ident?.length]
-        temp = ident[j].substring(1)
-        pos = _.findIndex(ids, name: temp)
-        if (pos == -1)
-          ids.push
-            name: temp,
-            file: file,
-            positions: [selectors[i].pos]
-        else
-          ids[pos].positions.push(selectors[i].pos)
+      if checkIds
+        ident = selectors[i].sel.match(idMatcher)
+        for j in [0...ident?.length]
+          temp = ident[j].substring(1)
+          pos = _.findIndex(ids, name: temp)
+          if (pos == -1)
+            ids.push
+              name: temp,
+              file: file,
+              positions: [selectors[i].pos]
+          else
+            ids[pos].positions.push(selectors[i].pos)
 
     return classes: classes, ids: ids
 

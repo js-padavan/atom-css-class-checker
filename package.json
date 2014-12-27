@@ -6,7 +6,7 @@
   "activationCommands": {
     "atom-workspace": "atom-css-class-checker:toggle"
   },
-  "repository": "https://github.com/atom/atom-package",
+  "repository": "https://github.com/js-padavan/atom-css-class-checker",
   "license": "MIT",
   "engines": {
     "atom": ">0.50.0"

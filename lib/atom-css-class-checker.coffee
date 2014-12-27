@@ -22,6 +22,9 @@ module.exports =
       default: []
       items:
         type: 'string'
+    checkIds:
+      type: 'boolean',
+      default: true
 
 
   activate: (state) ->

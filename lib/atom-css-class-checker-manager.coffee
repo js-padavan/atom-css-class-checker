@@ -34,6 +34,7 @@ class Manager
 
       #  susbscribing on css changes
       @watchCssChangings()
+      @subscribeOnSettingsChanges()
     @running = true
 
 
@@ -61,10 +62,8 @@ class Manager
           disposable = null
       else
         disposable = null
-      console.log @prevEditor
 
     getPrevEditor()
-
     @disposables['global'].add atom.workspace.onDidChangeActivePaneItem (item)=>
       # parsing css file if it is required
       if (@prevEditor.isCss && @prevEditor.modified)
@@ -80,7 +79,6 @@ class Manager
       # reparsing file on changings
     compositeDisposable.add editor.onDidStopChanging =>
        range = editor.getCurrentParagraphBufferRange()
-       console.log editor, range
        @parseTextRage(range, editor) unless range == undefined
 
     compositeDisposable.add editor.onDidDestroy =>
@@ -91,7 +89,13 @@ class Manager
 
     @disposables[editorUri] = compositeDisposable
 
+  subscribeOnSettingsChanges: ()->
+    @disposables['global'].add atom.config.onDidChange 'atom-css-class-checker.checkIds', =>
+      @cancel()
+      @init()
+
   parseTextRage: (range, editor)->
+    checkIds = atom.config.get('atom-css-class-checker.checkIds')
     @removeEditorMarkersInRange(range, editor)
     r = /class="([\w|\s|\-|_]*)"/gmi
     i = /id\s*=\s*["|']\s*([\w|\-|_]*)\s*["|']/gmi
@@ -100,11 +104,13 @@ class Manager
       it.range.start.column += it.matchText.indexOf('"')
       @scanInRange(it.range, editor)
     # scanning for ids
-    editor.scan i, (it)=>
-      it.range.start.column += it.matchText.indexOf('"')
-      @highlightIdRange(it.range, it.match[1], editor)
+    if checkIds
+      editor.scan i, (it)=>
+        it.range.start.column += it.matchText.indexOf('"')
+        @highlightIdRange(it.range, it.match[1], editor)
 
   parseEditor: (editor)->
+    checkIds = atom.config.get('atom-css-class-checker.checkIds')
     @removeAllEditorMarkers(editor)
     c = /class=["|']([\w|\s|\-|_]*)["|']/gmi
     i = /id\s*=\s*["|']\s*([\w|\-|_]*)\s*["|']/gmi
@@ -113,9 +119,10 @@ class Manager
       it.range.start.column += it.matchText.indexOf('"')
       @scanInRange(it.range, editor)
     # scanning for ids
-    editor.scan i, (it)=>
-      it.range.start.column += it.matchText.indexOf('"')
-      @highlightIdRange(it.range, it.match[1], editor)
+    if checkIds
+      editor.scan i, (it)=>
+        it.range.start.column += it.matchText.indexOf('"')
+        @highlightIdRange(it.range, it.match[1], editor)
 
   removeEditorMarkersInRange: (range, editor)->
     markers = @editorsMarkers[editor.getUri()]
@@ -174,6 +181,7 @@ class Manager
 
   cancel: ->
     @removeAllMarkers()
+    delete @parser
     for k,v of @disposables
       v.dispose()
     @running = false
