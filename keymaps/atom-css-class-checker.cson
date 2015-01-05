@@ -9,9 +9,10 @@
 # https://atom.io/docs/latest/advanced/keymaps
 '.workspace':
   'ctrl-alt-o': 'atom-css-class-checker:toggle'
+  'ctrl-b' : 'atom-css-class-checker:open-source'
 
-# '.atom-css-class-checker .hidden-input':
-#   "up": "atom-css-class-checker:select-previous"
-#   "down": "atom-css-class-checker:select-next"
-#   "escape": "atom-css-class-checker:cancel"
-#   "tab": "atom-css-class-checker:confirm"
+'.atom-css-class-checker-popup .hidden-input':
+  "up": "atom-css-class-checker:select-previous"
+  "down": "atom-css-class-checker:select-next"
+  "escape": "atom-css-class-checker:cancel"
+  "enter": "atom-css-class-checker:confirm"

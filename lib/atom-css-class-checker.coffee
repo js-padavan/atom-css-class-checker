@@ -13,7 +13,7 @@ module.exports =
     ignoreDirectories:
       type: 'array',
       title: 'Ignore Directories',
-      default: ['node_modules/', '.git/']
+      default: ['node_modules/', '.git/', './bower_components/']
       items:
         type: 'string'
     ignoreFiles:
@@ -30,8 +30,6 @@ module.exports =
   activate: (state) ->
     @manager = new Manager()
 
-    atom.commands.add 'atom-workspace', 'atom-css-class-checker:toggle': =>
-      @manager.toggle()
 
   deactivate: ->
     console.log 'deactivating'

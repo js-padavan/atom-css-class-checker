@@ -2,6 +2,7 @@ SSParser = require './stylesParser'
 _ = require 'lodash'
 {CompositeDisposable, Disposable} = require 'event-kit'
 path = require 'path'
+SelListPopup = require './atom-css-class-checker-view'
 
 
 
@@ -15,6 +16,14 @@ class Manager
     @cssFiles = ['.css']
     @running = false
     @editorsMarkers = []
+
+    atom.commands.add 'atom-workspace', 'atom-css-class-checker:toggle': =>
+      @toggle()
+
+    atom.commands.add 'atom-workspace', 'atom-css-class-checker:open-source': =>
+      console.log 'opening source'
+      @openSource()
+
 
   init: ->
     @parser = new SSParser()
@@ -36,7 +45,6 @@ class Manager
       @watchCssChangings()
       @subscribeOnSettingsChanges()
     @running = true
-
 
   containsHtml: (filename)->
     return (_.indexOf(@htmlContFiles, path.extname(filename)) != -1)
@@ -148,8 +156,9 @@ class Manager
         @editorsMarkers[k][i].destroy()
       delete @editorsMarkers[k]
 
-  createEditorMarker: (editor, range)->
+  createEditorMarker: (editor, range, type)->
     marker = editor.markBufferRange(range, invalidate: 'overlap')
+    marker.type = type;
     uri = editor.getUri()
     if @editorsMarkers[uri] != undefined
       @editorsMarkers[uri].push(marker)
@@ -159,7 +168,7 @@ class Manager
 
   highlightClassRange: (range, text, editor)->
     return unless range isnt undefined and text isnt undefined and editor isnt undefined
-    marker = @createEditorMarker(editor, range)
+    marker = @createEditorMarker(editor, range, 'class')
     if (_.findIndex(@parser.classes, name: text) != -1)
       editor.decorateMarker(marker, type: 'highlight', class: 'existed-class')
     else
@@ -168,7 +177,7 @@ class Manager
 
   highlightIdRange: (range, text, editor)->
     return unless range isnt undefined and text isnt undefined and editor isnt undefined
-    marker = @createEditorMarker(editor, range)
+    marker = @createEditorMarker(editor, range, 'id')
     if (_.findIndex(@parser.ids, name: text) != -1)
       editor.decorateMarker(marker, type: 'highlight', class: 'existed-class')
     else
@@ -193,5 +202,37 @@ class Manager
     else
       console.log 'starting'
       @init()
+
+  openSource: ->
+    # openTextEditor = (url)->
+    #
+    togglePopup = (items, editor)->
+      popup = new SelListPopup(editor)
+      popup.setItems(items)
+      popup.toggle()
+
+    console.log 'opening source'
+    editor = atom.workspace.getActiveTextEditor()
+    markers = @editorsMarkers[editor.getUri()]
+    cursorPoint = editor.getCursorBufferPosition()
+    for i in [0...markers.length]
+      range = markers[i].getBufferRange();
+      if range.containsPoint(cursorPoint)
+        console.log 'contains', markers[i];
+        text = editor.getTextInBufferRange(range);
+        type = markers[i].type;
+        break;
+
+    return unless text != undefined
+    console.log 'text: ', text, type
+    switch type
+      when 'class'
+        ind = _.findIndex(@parser.classes, name: text)
+        if (ind != -1)
+          its = _.flatten(@parser.classes[ind].references, 'sel')
+          console.log its;
+          togglePopup(its, editor);
+
+
 
 module.exports = Manager
