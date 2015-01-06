@@ -240,7 +240,6 @@ class Manager
       findReferences = (selectors, selName) =>
         subsels = _.filter(selectors, name: selName)
         res = []
-        console.log subsels
         for i in [0...subsels.length]
           res = res.concat(subsels[i].references)
         return res
@@ -258,7 +257,6 @@ class Manager
     return unless markerInfo.text != undefined
     references = findSelectors(markerInfo.type, markerInfo.text)
     return unless references.length
-    console.log references
     if references.length > 1
       togglePopup(references, editor)
     else
