@@ -224,30 +224,45 @@ class Manager
       popup.onConfirm = onConfirm
       popup.toggle()
 
+    getMarkerInfo = (editor) =>
+      markers = @editorsMarkers[editor.getUri()]
+      cursorPoint = editor.getCursorBufferPosition()
+      for i in [0...markers.length]
+        range = markers[i].getBufferRange();
+        if range.containsPoint(cursorPoint)
+          console.log 'contains', markers[i];
+          text = editor.getTextInBufferRange(range);
+          type = markers[i].type;
+          break
+      return text: text, type: type
 
-    console.log 'opening source'
+    findSelectors = (type, selName) =>
+      findReferences = (selectors, selName) =>
+        subsels = _.filter(selectors, name: selName)
+        res = []
+        console.log subsels
+        for i in [0...subsels.length]
+          res = res.concat(subsels[i].references)
+        return res
+
+      switch type
+        when 'class'
+          return findReferences(@parser.classes, selName);
+        when 'id'
+          return findReferences(@parser.ids, selName)
+
+
+
     editor = atom.workspace.getActiveTextEditor()
-    markers = @editorsMarkers[editor.getUri()]
-    cursorPoint = editor.getCursorBufferPosition()
-    for i in [0...markers.length]
-      range = markers[i].getBufferRange();
-      if range.containsPoint(cursorPoint)
-        console.log 'contains', markers[i];
-        text = editor.getTextInBufferRange(range);
-        type = markers[i].type;
-        break;
-
-    return unless text != undefined
-    console.log 'text: ', text, type
-    switch type
-      when 'class'
-        ind = _.findIndex(@parser.classes, name: text)
-        return unless ind != -1
-        if (@parser.classes[ind].references.length > 1)
-          togglePopup(@parser.classes[ind].references, editor);
-        else
-          openEditor @parser.classes[ind].references[0].file,
-                     @parser.classes[ind].references[0].pos.start.line
+    markerInfo = getMarkerInfo(editor)
+    return unless markerInfo.text != undefined
+    references = findSelectors(markerInfo.type, markerInfo.text)
+    return unless references.length
+    console.log references
+    if references.length > 1
+      togglePopup(references, editor)
+    else
+      openEditor references[0].file, references[0].pos.start.line
 
 
 

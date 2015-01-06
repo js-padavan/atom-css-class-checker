@@ -70,7 +70,6 @@ class SSParser
     @parseText(buf, file)
 
   parseText: (buf, file)->
-    console.log 'parsing file ', file
     checkIds = atom.config.get('atom-css-class-checker.checkIds')
     try
       cssAST = parse(buf, silent: false);
@@ -90,7 +89,6 @@ class SSParser
     idMatcher = /#([\w|-]*)/gmi
     classes = [];
     ids = [];
-    console.log selectors;
     for i  in [0...selectors.length]
       cls = selectors[i].sel.match(classMatcher)
       for j in [0...cls?.length]
