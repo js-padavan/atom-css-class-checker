@@ -206,10 +206,24 @@ class Manager
   openSource: ->
     # openTextEditor = (url)->
     #
+
+    openEditor = (filename, line)->
+      atom.workspace.open(filename)
+      .then (editor)->
+        editor.setCursorBufferPosition([line, 0])
+        editor.scrollToCursorPosition()
+
+    onConfirm = (item)->
+      console.log 'onConfirmed called'
+      openEditor(item.file, item.pos.start.line)
+
     togglePopup = (items, editor)->
       popup = new SelListPopup(editor)
       popup.setItems(items)
+      console.dir(popup)
+      popup.onConfirm = onConfirm
       popup.toggle()
+
 
     console.log 'opening source'
     editor = atom.workspace.getActiveTextEditor()
@@ -228,10 +242,12 @@ class Manager
     switch type
       when 'class'
         ind = _.findIndex(@parser.classes, name: text)
-        if (ind != -1)
-          its = _.flatten(@parser.classes[ind].references, 'sel')
-          console.log its;
-          togglePopup(its, editor);
+        return unless ind != -1
+        if (@parser.classes[ind].references.length > 1)
+          togglePopup(@parser.classes[ind].references, editor);
+        else
+          openEditor @parser.classes[ind].references[0].file,
+                     @parser.classes[ind].references[0].pos.start.line
 
 
 

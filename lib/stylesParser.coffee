@@ -100,9 +100,12 @@ class SSParser
           classes.push
             name: temp,
             file: file,
-            references: [pos: selectors[i].pos, sel: selectors[i].sel]
+            references: [pos: selectors[i].pos, sel: selectors[i].sel, file: file]
         else
-          classes[pos].references.push(pos: selectors[i].pos, sel: selectors[i].sel)
+          classes[pos].references.push
+            pos: selectors[i].pos
+            sel: selectors[i].sel
+            file: file
 
       if checkIds
         ident = selectors[i].sel.match(idMatcher)
