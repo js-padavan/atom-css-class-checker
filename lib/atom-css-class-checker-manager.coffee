@@ -208,7 +208,10 @@ class Manager
     #
 
     openEditor = (filename, line)->
-      atom.workspace.open(filename)
+      openInSplit = atom.config.get('atom-css-class-checker.openSourceInSplitWindow');
+      options =
+        split: if openInSplit then 'right' else undefined
+      atom.workspace.open(filename, options)
       .then (editor)->
         editor.setCursorBufferPosition([line, 0])
         editor.scrollToCursorPosition()

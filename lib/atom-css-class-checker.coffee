@@ -25,7 +25,9 @@ module.exports =
     checkIds:
       type: 'boolean',
       default: true
-
+    openSourceInSplitWindow:
+      type: 'boolean',
+      default: true
 
   activate: (state) ->
     @manager = new Manager()
