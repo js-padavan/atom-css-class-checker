@@ -1,7 +1,7 @@
 {
   "name": "atom-css-class-checker",
   "main": "./lib/atom-css-class-checker",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "validates html class tags, provides 'openSource' functionality for CSS classes and ids",
   "activationCommands": {
     "atom-workspace": "atom-css-class-checker:toggle"
