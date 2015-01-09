@@ -4,12 +4,6 @@
 // for a full listing of what's available.
 @import "ui-variables";
 
-.atom-package {
-}
-
-.test {
-  height: 0;
-}
 
 .existed-class .region {
   border-bottom: 1px solid green;
@@ -19,14 +13,24 @@
   border-bottom: 1px solid orange;
 }
 
-
-.header {
-
+.select-list-title {
+  border-bottom: 1px solid;
 }
 
-li .sel {
+// shadowDOM support
 
+atom-text-editor::shadow .existed-class .region {
+  border-bottom: 1px solid green;
 }
+
+atom-text-editor::shadow .non-existed-class .region {
+  border-bottom: 1px solid orange;
+}
+
+atom-text-editor::shadow .select-list-title {
+  border-bottom: 1px solid;
+}
+
 
 li .linepos {
   text-align: right;

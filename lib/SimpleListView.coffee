@@ -11,6 +11,7 @@ class SimpleSelectListView extends View
   @content: ->
     @div class: "select-list popover-list", =>
       @input class: "hidden-input", outlet: "hiddenInput"
+      @div class: "select-list-title", outlet: "title"
       @ol class: "list-group", outlet: "list"
 
   # Private: Listens to events, delegates them to instance methods

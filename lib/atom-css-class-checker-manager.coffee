@@ -2,7 +2,7 @@ SSParser = require './stylesParser'
 _ = require 'lodash'
 {CompositeDisposable, Disposable} = require 'event-kit'
 path = require 'path'
-SelListPopup = require './atom-css-class-checker-view'
+{PopupList, ReferencesList, FilesList} = require './atom-css-class-checker-view'
 
 
 
@@ -53,6 +53,7 @@ class Manager
     return (_.indexOf(@cssFiles, path.extname(filename)) != -1)
 
   watchCssChangings: ->
+    console.log 'watching CSSSSSS chanfes';
     disposable = null
     getPrevEditor = (editor)=>
       @prevEditor.editor = editor || atom.workspace.getActivePaneItem()
@@ -65,6 +66,7 @@ class Manager
       disposable?.dispose()
       if @prevEditor.isCss
         disposable = editor.onDidStopChanging =>
+          console.log 'modified';
           @prevEditor.modified = true
           disposable.dispose()
           disposable = null
@@ -73,10 +75,12 @@ class Manager
 
     getPrevEditor()
     @disposables['global'].add atom.workspace.onDidChangeActivePaneItem (item)=>
+      console.log 'on did change';
       # parsing css file if it is required
       if (@prevEditor.isCss && @prevEditor.modified)
-        console.log 'parsing required'
+        console.log 'did parsing required'
         @parser.updateWithSSFile(@prevEditor.editor.getUri(), @prevEditor.editor.getText())
+        @prevEditor.modified = false;
       getPrevEditor(item)
 
 
@@ -91,7 +95,7 @@ class Manager
 
     compositeDisposable.add editor.onDidDestroy =>
       console.log 'on did close'
-      @disposables[editorUri].dispose()
+      @disposables[editorUri]?.dispose()
       @disposables[editorUri] = null
 
 
@@ -204,10 +208,9 @@ class Manager
       @init()
 
   openSource: ->
-    # openTextEditor = (url)->
-    #
-
-    openEditor = (filename, line)->
+    # opens editor with specified filename
+    # if line param not specified when the editor will be opened on the last line
+    openEditor = (filename, line=0)->
       openInSplit = atom.config.get('atom-css-class-checker.openSourceInSplitWindow');
       options =
         split: if openInSplit then 'right' else undefined
@@ -215,16 +218,26 @@ class Manager
       .then (editor)->
         editor.setCursorBufferPosition([line, 0])
         editor.scrollToCursorPosition()
+        return editor
 
-    onConfirm = (item)->
-      console.log 'onConfirmed called'
+    onConfirmReference = (item) ->
       openEditor(item.file, item.pos.start.line)
 
-    togglePopup = (items, editor)->
-      popup = new SelListPopup(editor)
+    onConfirmFile = (item) ->
+      console.log 'onConfirmFileCalled'
+      openEditor(item.path, 0).then (editor)->
+        editor.setCursorScreenPosition [editor.getScreenLineCount(), 0]
+
+    toggleReferencesList = (items, editor) ->
+      popup = new ReferencesList(editor)
       popup.setItems(items)
-      console.dir(popup)
-      popup.onConfirm = onConfirm
+      popup.onConfirm = onConfirmReference
+      popup.toggle()
+
+    toggleFilesList = (items, editor)->
+      popup = new FilesList(editor)
+      popup.setItems(items)
+      popup.onConfirm = onConfirmFile
       popup.toggle()
 
     getMarkerInfo = (editor) =>
@@ -259,11 +272,24 @@ class Manager
     markerInfo = getMarkerInfo(editor)
     return unless markerInfo.text != undefined
     references = findSelectors(markerInfo.type, markerInfo.text)
-    return unless references.length
-    if references.length > 1
-      togglePopup(references, editor)
-    else
-      openEditor references[0].file, references[0].pos.start.line
+    switch references.length
+      when 0
+        items = _.map @parser.ssFiles, (file)->
+          return {
+            filename: path.basename(file),
+            path: file
+          }
+        toggleFilesList items, editor
+        break;
+      when 1
+        openEditor references[0].file, references[0].pos.start.line
+        break;
+      else
+        console.log editor
+        toggleReferencesList references, editor
+        break;
+
+
 
 
 

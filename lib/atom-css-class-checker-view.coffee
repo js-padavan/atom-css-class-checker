@@ -2,12 +2,11 @@ path = require 'path'
 SimpleSelectListView = require './SimpleListView'
 {CompositeDisposable} = require 'event-kit'
 
-module.exports =
-class entryView extends SimpleSelectListView
+class PopupList extends SimpleSelectListView
   visible: false
 
   initialize:  (@editor)->
-    console.log 'initialize called'
+    console.log 'popupinit with', @editor, arguments
     super
     @editorView = atom.views.getView(@editor)
     @addClass('popover-list atom-css-class-checker-popup')
@@ -21,26 +20,14 @@ class entryView extends SimpleSelectListView
       "atom-css-class-checker:cancel": @cancel
 
 
-
-  viewForItem: (item)->
-    console.log 'child view for item', item
-    "<li>
-      <div class='sel'>#{item.sel}</div>
-      <div class='linepos'>#{path.basename(item.file)}:#{item.pos.start.line}</div>
-    </li>"
-
   confirmed: (item)->
-    console.log "#{item} was selected"
-    console.log(@onConfirm)
     @onConfirm?(item)
 
   selectNextItemView: ->
-    console.log 'selecting next item'
     super
     false
 
   selectPreviousItemView: ->
-    console.log 'selecting prev item'
     super
     false
 
@@ -61,10 +48,8 @@ class entryView extends SimpleSelectListView
 
 
   attach: ->
-    console.log @editor
     cursorMarker = @editor.getLastCursor().getMarker()
     @overlayDecoration = @editor.decorateMarker(cursorMarker, type: 'overlay', position: 'tail', item: this)
-    console.log @overlayDecoration
     @visible = true
 
   # Toggle the visibility of this view
@@ -74,7 +59,6 @@ class entryView extends SimpleSelectListView
     else
       @attach()
 
-    console.log 'AtomPackageView was toggled!'
 
   cancel: =>
     return unless @active
@@ -85,7 +69,30 @@ class entryView extends SimpleSelectListView
     super
     unless @editorView.hasFocus()
       @editorView.focus()
-    # if @element.parentElement?
-    #   @element.remove()
-    # else
-    #   atom.workspaceView.append(@element)
+
+
+class ReferencesList extends PopupList
+  initialize: (editor)->
+    super
+
+  viewForItem: (item)->
+    "<li>
+      <div class='sel'>#{item.sel}</div>
+      <div class='linepos'>#{path.basename(item.file)}:#{item.pos.start.line}</div>
+    </li>"
+
+class FilesList extends PopupList
+  initialize: (editor)->
+    super
+    @title.text "define in:"
+
+  viewForItem: (item)->
+    prjPath = atom.project.getPath();
+    "<li>
+      <div class='sel'>#{item.filename}</div>
+      <div class='linepos'>#{item.path.replace(prjPath, '.')}</div>
+    </li>"
+
+module.exports.PopupList = PopupList
+module.exports.ReferencesList = ReferencesList
+module.exports.FilesList = FilesList
